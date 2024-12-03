@@ -1,0 +1,27 @@
+version : "3"
+services:
+  api_server :
+    build : .
+    depends_on:
+      - postgres_cs_explorer_db
+    ports:
+      - 8080:8000
+    env_file:
+      - ./.env
+    environment :
+      - ENVIRONMENT=dev
+      - db_hostname=postgres_cs_explorer_db
+
+
+  postgres_cs_explorer_db :
+    image : postgres
+    ports:
+      - 5432:5432
+    environment:
+      - POSTGRES_PASSWORD=password123 # Please replace this default password.
+      - POSTGRES_DB=cs_explorer_db
+    volumes:
+      - postgres_cs_explore_db_volume:/var/lib/postgresql/data
+
+volumes:
+  postgres_cs_explore_db_volume :

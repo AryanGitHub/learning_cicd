@@ -1,0 +1,6 @@
+.venv/*
+__pycache__
+fcc_api_development.code-workspace
+.env
+.idea/
+.vscode/
