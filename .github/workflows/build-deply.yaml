@@ -1,0 +1,80 @@
+name: Build and deploy to Docker Hub
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    environment:
+      name: testing
+    runs-on: ubuntu-latest
+    env:
+      ENVIRONMENT: "dev"
+      db_protocol: "postgresql://"
+      db_hostname: ${{ secrets.DB_HOSTNAME }}
+      db_port: ${{ secrets.DB_PORT }}
+      db_username: ${{ secrets.DB_USERNAME }}
+      db_password: ${{ secrets.DB_PASSWORD }}
+      db_name: ${{ secrets.DB_NAME }}
+      secret: ${{ secrets.SECRET }}
+      token_timeout_minutes: ${{ secrets.TOKEN_TIMEOUT_MINUTES }}
+      
+    # Service containers to run with `runner-job`
+    services:
+      # Label used to access the service container
+      postgres:
+        # Docker Hub image
+        image: postgres
+        # Provide the password for postgres
+        env:
+          POSTGRES_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          POSTGRES_DB      : ${{ secrets.DB_NAME }}_test
+        # Set health checks to wait until postgres has started
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          # Maps tcp port 5432 on service container to the host
+          - 5432:5432
+    
+    
+    steps:
+      - name: Checkout the code
+        uses: actions/checkout@v2  # Consider using the latest stable version
+      - name: Saying hi
+        run: echo "hi"
+      - name: Checking OS
+        run: cat /etc/os-release
+      - name: Set up Python
+        uses: actions/setup-python@v4  # Consider using the latest stable version
+        with:
+          python-version: '3.13'
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Install pytest
+        run: pip install pytest
+      - name: Run pytest
+        run: pytest
+        
+  build_image_and_publish_to_dockerhub:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/cs_explorer_api_backend:latest
+          
+
+
